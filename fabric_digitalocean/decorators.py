@@ -29,7 +29,7 @@ def _list_annotating_decorator(attribute, *values):
     return attach_list
 
 
-def droplet_generator(region=None, tag=None, ids=[]):
+def droplet_generator(region=None, tag=None, ids=[], status=[]):
     """
     A generator that yields Droplet IP addresses.
 
@@ -65,12 +65,15 @@ def droplet_generator(region=None, tag=None, ids=[]):
                 droplet = client.get_droplet(droplet_id=i)
                 hosts.append(droplet)
 
+    if status and isinstance(status, list):
+        hosts = [h for h in hosts if h.status in status]
+
     for h in hosts:
         yield h.ip_address
 
 
 @wraps(droplet_generator)
-def droplets(region=None, tag=None, ids=[]):
+def droplets(region=None, tag=None, ids=[], status=[]):
     """
     Fabric decorator for running a task on DigitalOcean Droplets.
 
@@ -86,4 +89,5 @@ def droplets(region=None, tag=None, ids=[]):
     return _list_annotating_decorator('hosts',
                                       droplet_generator(region,
                                                         tag,
-                                                        ids))
+                                                        ids,
+                                                        status))

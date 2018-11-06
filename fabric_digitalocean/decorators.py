@@ -2,7 +2,7 @@ import digitalocean
 import os
 
 from fabric.decorators import wraps, _wrap_as_new
-from retry import retry
+from retry.api import retry_call
 
 
 class TokenError(Exception):
@@ -30,7 +30,6 @@ def _list_annotating_decorator(attribute, *values):
     return attach_list
 
 
-@retry((digitalocean.baseapi.DataReadError, digitalocean.baseapi.JSONReadError), tries=5, delay=10, backoff=2, max_delay=60)
 def droplet_generator(region=None, tag=None, ids=[], status=[]):
     """
     A generator that yields Droplet IP addresses.
@@ -75,7 +74,7 @@ def droplet_generator(region=None, tag=None, ids=[], status=[]):
 
 
 @wraps(droplet_generator)
-def droplets(region=None, tag=None, ids=[], status=[]):
+def droplets(region=None, tag=None, ids=[], status=[], retry={}):
     """
     Fabric decorator for running a task on DigitalOcean Droplets.
 
@@ -88,8 +87,12 @@ def droplets(region=None, tag=None, ids=[], status=[]):
     :param id: A list of DigitalOcean Droplet IDs
     :type id: list
     """
-    return _list_annotating_decorator('hosts',
-                                      droplet_generator(region,
-                                                        tag,
-                                                        ids,
-                                                        status))
+    retry_defaults = {'tries': 1, 'delay': 0, 'backoff':1, 'max_delay': None}
+    droplets = retry_call(_list_annotating_decorator,
+                          fargs=['hosts', droplet_generator(region, tag, ids, status)],
+                          exceptions=(digitalocean.baseapi.DataReadError, digitalocean.baseapi.JSONReadError),
+                          tries=retry.get('tries', retry_defaults['tries']),
+                          delay=retry.get('delay', retry_defaults['delay']),
+                          backoff=retry.get('backoff', retry_defaults['backoff']),
+                          max_delay=retry.get('max_delay', retry_defaults['max_delay']))
+    return droplets

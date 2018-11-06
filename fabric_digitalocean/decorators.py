@@ -2,6 +2,7 @@ import digitalocean
 import os
 
 from fabric.decorators import wraps, _wrap_as_new
+from retry import retry
 
 
 class TokenError(Exception):
@@ -29,6 +30,7 @@ def _list_annotating_decorator(attribute, *values):
     return attach_list
 
 
+@retry((digitalocean.baseapi.DataReadError, digitalocean.baseapi.JSONReadError), tries=5, delay=10, backoff=2, max_delay=60)
 def droplet_generator(region=None, tag=None, ids=[], status=[]):
     """
     A generator that yields Droplet IP addresses.

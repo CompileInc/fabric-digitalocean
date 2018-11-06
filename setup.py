@@ -16,7 +16,7 @@ setup(
     author_email='a.starr.b@gmail.com',
 
     packages=find_packages(),
-    install_requires=['fabric', 'python-digitalocean'],
+    install_requires=['fabric', 'python-digitalocean', 'retry'],
     extras_require={
         'test': ['nose', 'coverage', 'responses']
     },
